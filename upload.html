@@ -1,1 +1,114 @@
-<html><head><title>Upload</title></head><body>Password protected uploader coming here.</body></html>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Secure Image Upload</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 40px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      font-size: 16px;
+    }
+    #uploadBox {
+      display: none;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>WM Upload Portal</h2>
+
+  <div id="passwordBox">
+    <input type="password" id="password" placeholder="Enter password">
+    <button onclick="checkPassword()">Enter</button>
+  </div>
+
+  <div id="uploadBox">
+    <input type="file" id="imageInput" accept="image/*"><br>
+    <button onclick="uploadImage()">Upload Image</button>
+    <p id="status"></p>
+  </div>
+
+  <script>
+    const CLIENT_ID = "e6c443dfd0f5ac6";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFuEe9tehBp5vEP0dM5-1K-J_QgNRfxQuHFTnFBJy784D6lZplWQRJXh-hb-nAmT3x/exec";
+    const PASSWORD = "patchpower";
+
+    function checkPassword() {
+      const input = document.getElementById("password").value;
+      if (input === PASSWORD) {
+        document.getElementById("passwordBox").style.display = "none";
+        document.getElementById("uploadBox").style.display = "block";
+      } else {
+        alert("Incorrect password.");
+      }
+    }
+
+    function uploadImage() {
+      const fileInput = document.getElementById("imageInput");
+      const status = document.getElementById("status");
+
+      if (!fileInput.files.length) {
+        alert("Please select an image.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function () {
+        const base64 = reader.result.split(',')[1];
+
+        fetch("https://api.imgur.com/3/image", {
+          method: "POST",
+          headers: {
+            Authorization: "Client-ID " + CLIENT_ID,
+            Accept: "application/json",
+          },
+          body: new URLSearchParams({
+            image: base64,
+            type: "base64"
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const imgurLink = data.data.link;
+            status.innerHTML = "Uploaded to Imgur: <a href='" + imgurLink + "' target='_blank'>" + imgurLink + "</a>";
+
+            fetch(SCRIPT_URL, {
+              method: "POST",
+              body: JSON.stringify({ imgur: imgurLink }),
+              headers: {
+                "Content-Type": "application/json"
+              }
+            })
+            .then(res => res.text())
+            .then(msg => {
+              status.innerHTML += "<br>Saved to gallery.";
+            })
+            .catch(err => {
+              status.innerHTML += "<br>Imgur saved, but error saving to sheet.";
+            });
+
+          } else {
+            status.innerHTML = "Imgur upload failed.";
+          }
+        })
+        .catch(() => {
+          status.innerHTML = "Upload error.";
+        });
+      };
+
+      reader.readAsDataURL(file);
+    }
+  </script>
+</body>
+</html>
