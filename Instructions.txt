@@ -1,0 +1,4 @@
+1. Deploy Apps Script
+2. Set the sheet ID
+3. Upload via upload.html
+4. Gallery auto-loads.
